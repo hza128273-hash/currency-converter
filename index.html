@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إعداد المطور حسين القاضي</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e40af"> <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            font-family: 'Tahoma', 'Arial', sans-serif; 
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white shadow-xl rounded-2xl w-full max-w-md overflow-hidden flex flex-col">
+        
+        <div class="bg-blue-800 text-white p-4 text-center text-xl font-bold">
+            إعداد المطور حسين القاضي
+        </div>
+
+        <div class="p-6 flex flex-col gap-5">
+            
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">المبلغ المراد تحويله:</label>
+                <input type="number" id="amount" placeholder="أدخل المبلغ" class="w-full p-3 border border-gray-300 rounded-lg text-center text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 items-center">
+                <div class="w-full">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">من:</label>
+                    <select id="from" class="w-full p-3 border border-gray-300 rounded-lg text-center text-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="YER_old">ريال يمني قديم</option>
+                        <option value="SAR">ريال سعودي</option>
+                        <option value="YER_new">ريال يمني جديد</option>
+                    </select>
+                </div>
+                <div class="text-gray-400 font-bold mt-6 hidden sm:block">إلى</div>
+                <div class="w-full">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">إلى:</label>
+                    <select id="to" class="w-full p-3 border border-gray-300 rounded-lg text-center text-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="SAR">ريال سعودي</option>
+                        <option value="YER_old">ريال يمني قديم</option>
+                        <option value="YER_new">ريال يمني جديد</option>
+                    </select>
+                </div>
+            </div>
+
+            <hr class="border-gray-200">
+
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">أسعار الصرف الحالية:</label>
+                <div class="flex flex-col gap-3">
+                    <input type="number" id="rate_old" placeholder="سعر القديم مقابل السعودي" class="w-full p-3 border border-gray-300 rounded-lg text-center text-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="number" id="rate_new" placeholder="سعر الجديد مقابل السعودي" class="w-full p-3 border border-gray-300 rounded-lg text-center text-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <button onclick="convert()" class="w-full bg-blue-800 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 shadow-md mt-2 text-lg">
+                تـحـويـل
+            </button>
+
+            <div class="output min-h-[60px] flex items-center justify-center bg-gray-50 rounded-lg border border-dashed border-gray-300 p-4">
+                <span id="result" class="text-xl font-bold text-blue-900 text-center">النتيجة ستظهر هنا</span>
+            </div>
+
+        </div>
+
+        <div class="bg-gray-100 text-gray-500 p-3 text-center text-sm font-medium mt-auto border-t border-gray-200">
+            برمجة وتطوير: حسين القاضي
+        </div>
+
+    </div>
+
+    <script>
+        // تسجيل Service Worker ليعمل التطبيق بدون إنترنت
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => console.log('ServiceWorker registered'))
+                    .catch(err => console.log('ServiceWorker registration failed: ', err));
+            });
+        }
+
+        // تحميل الأسعار عند فتح الصفحة
+        window.onload = function() {
+            const savedOld = localStorage.getItem("rate_old");
+            const savedNew = localStorage.getItem("rate_new");
+
+            if (savedOld) document.getElementById("rate_old").value = savedOld;
+            if (savedNew) document.getElementById("rate_new").value = savedNew;
+        };
+
+        // حفظ الأسعار عند التغيير
+        document.getElementById("rate_old").addEventListener("input", function() {
+            localStorage.setItem("rate_old", this.value);
+        });
+
+        document.getElementById("rate_new").addEventListener("input", function() {
+            localStorage.setItem("rate_new", this.value);
+        });
+
+        function convert() {
+            const amount = parseFloat(document.getElementById("amount").value);
+            const from = document.getElementById("from").value;
+            const to = document.getElementById("to").value;
+
+            const rateOld = parseFloat(document.getElementById("rate_old").value);
+            const rateNew = parseFloat(document.getElementById("rate_new").value);
+
+            const resultElement = document.getElementById("result");
+
+            if (isNaN(amount) || isNaN(rateOld) || isNaN(rateNew)) {
+                resultElement.textContent = "يرجى إدخال جميع القيم (المبلغ وأسعار الصرف)!";
+                resultElement.classList.replace("text-blue-900", "text-red-600");
+                return;
+            }
+
+            resultElement.classList.replace("text-red-600", "text-blue-900");
+
+            let amountInSAR;
+
+            switch(from) {
+                case "SAR": amountInSAR = amount; break;
+                case "YER_old": amountInSAR = amount / rateOld; break;
+                case "YER_new": amountInSAR = amount / rateNew; break;
+            }
+
+            let converted;
+
+            switch(to) {
+                case "SAR": converted = amountInSAR; break;
+                case "YER_old": converted = amountInSAR * rateOld; break;
+                case "YER_new": converted = amountInSAR * rateNew; break;
+            }
+
+            const formattedAmount = amount.toLocaleString('en-US');
+            const formattedConverted = converted.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            resultElement.innerHTML = `<span class="text-gray-600 text-lg">${formattedAmount} ${getCurrencyName(from)} =</span><br/><span class="text-2xl text-green-700">${formattedConverted} ${getCurrencyName(to)}</span>`;
+        }
+
+        function getCurrencyName(code) {
+            switch(code) {
+                case "SAR": return "ريال سعودي";
+                case "YER_old": return "ريال يمني قديم";
+                case "YER_new": return "ريال يمني جديد";
+            }
+        }
+    </script>
+</body>
+</html>
